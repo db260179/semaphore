@@ -2,6 +2,7 @@ package setup
 
 import (
 	"fmt"
+	"bufio"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -173,19 +174,42 @@ func AskConfigConfirmation(config *util.ConfigType) bool {
 }
 
 func askValue(prompt string, defaultValue string, item interface{}) {
-	// Print prompt with optional default value
-	fmt.Print(prompt)
-	if len(defaultValue) != 0 {
-		fmt.Print(" (default " + defaultValue + ")")
-	}
-	fmt.Print(": ")
+    // Print prompt with optional default value
+    fmt.Print(prompt)
+    if len(defaultValue) != 0 {
+        fmt.Print(" (default " + defaultValue + ")")
+    }
+    fmt.Print(": ")
 
-	_, _ = fmt.Sscanln(defaultValue, item)
+    // Use bufio.Scanner to read the input with whitespacing
+    scanner := bufio.NewScanner(os.Stdin)
+    scanner.Scan()
+    input := scanner.Text()
+    if err := scanner.Err(); err != nil {
+        log.Fatal("error reading input:", err)
+    }
 
-	scanErrorChecker(fmt.Scanln(item))
+    // If input is empty and a default value is set, use the default value
+    if len(input) == 0 && len(defaultValue) != 0 {
+        input = defaultValue
+    }
 
-	// Empty line after prompt
-	fmt.Println("")
+    // Replace spaces with Unicode escape sequence
+    input = strings.ReplaceAll(input, " ", "\\u0020")
+
+    // Use fmt.Sscan to parse the input into the item
+    if len(input) != 0 {
+        _, err := fmt.Sscan(input, item)
+        if err != nil {
+            log.Fatal("error scanning input:", err)
+        }
+    }
+
+    // Print the input value
+    fmt.Println("You entered:", input)
+
+    // Empty line after prompt
+    fmt.Println("")
 }
 
 func askConfirmation(prompt string, defaultValue bool, item *bool) {
